@@ -32,12 +32,10 @@ I am a passionate Machine Learning and AI enthusiast with a strong analytical an
 - Tools: Git, GitHub, VS Code, Docker, AWS S3
 - Areas of Interest: AI, NLP, Deep Learning, Software Engineering
 
+
 ## Projects
 **AI Job Market Analysis**
 - Conducted research and analysis of AI job markets using NLP techniques.
-
-**Artificial Consciousness Research Papers**
-- Initiated a research project on Artificial Consciousness, exploring the intersection of cognitive science and AI.
 
 **Quiz Generator**
 - Created a quiz generator using NLP libraries for efficient question formulation.
