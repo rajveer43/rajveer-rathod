@@ -11,10 +11,6 @@ I am a passionate Machine Learning and AI enthusiast with a strong analytical an
 - Birla Vishvakarma Mahavidyalaya, 2019-2023
 
 ## Experience
-**Volunteer Machine Learning Researcher**
-- Unify Remote, May 2023 - Present
-    - Contributed to the Ivy-UnifyAI deep learning framework.
-    - Collaborated with developers on backends and documentation for various ML frameworks.
     
 **Machine Learning Researcher**
 - Physical Research Laboratory, January 2023 - May 2023
