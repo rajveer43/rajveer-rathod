@@ -47,6 +47,17 @@ I am a passionate Machine Learning and AI enthusiast with a strong analytical an
 - Contributed to Hugging Face, Pytorch, Pytorch Geometric, Numpy, MindsDB, and more.
 - Actively involved in solving issues, improving documentation, and enhancing community engagement.
 
+
+
+
+
+
+badges:
+
+
+
+<div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="3d6807fa-813d-4033-8ba9-7c3b83d82740" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="//cdn.credly.com/assets/utilities/embed.js"></script>
+
 ## Extra-Curricular Activities
 - Runner-up at Smart India Hackathon (SIH) 2022 for developing ProjectExpo.
 - Runner-up in GDSC BVM’s Solution Fest with Sign Language Detection project.
