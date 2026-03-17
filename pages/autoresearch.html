@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoResearch by Andrej Karpathy</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #1e1e2e;
+    --accent: #e8ff47;
+    --accent2: #47c4ff;
+    --accent3: #ff6b47;
+    --text: #e2e2e8;
+    --muted: #7a7a8c;
+    --serif: 'Playfair Display', Georgia, serif;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.4;
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 80px 60px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(232,255,71,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(232,255,71,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridPulse 8s ease-in-out infinite;
+  }
+
+  @keyframes gridPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(232,255,71,0.08) 0%, transparent 70%);
+    top: -100px;
+    right: -100px;
+    animation: glowFloat 10s ease-in-out infinite;
+  }
+
+  @keyframes glowFloat {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-30px, 30px); }
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    width: 40px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(52px, 8vw, 110px);
+    font-weight: 900;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    position: relative;
+    z-index: 2;
+    max-width: 900px;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-subtitle {
+    margin-top: 32px;
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 560px;
+    position: relative;
+    z-index: 2;
+    font-weight: 400;
+    line-height: 1.6;
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 40px;
+    margin-top: 48px;
+    padding-top: 40px;
+    border-top: 1px solid var(--border);
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .hero-stat-num {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .hero-stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+  }
+
+  /* CONTENT */
+  .content-wrapper {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 80px 40px;
+  }
+
+  /* SECTION HEADERS */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--border), transparent);
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin-bottom: 28px;
+    color: var(--text);
+  }
+
+  h3 {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 600;
+    margin: 48px 0 16px;
+    color: var(--text);
+  }
+
+  p {
+    font-size: 17px;
+    line-height: 1.85;
+    color: #c0c0cc;
+    margin-bottom: 24px;
+    font-weight: 300;
+  }
+
+  strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* PULLQUOTE */
+  .pullquote {
+    border-left: 3px solid var(--accent);
+    padding: 24px 36px;
+    margin: 48px 0;
+    background: rgba(232,255,71,0.03);
+    position: relative;
+  }
+
+  .pullquote::before {
+    content: '"';
+    font-family: var(--serif);
+    font-size: 120px;
+    color: rgba(232,255,71,0.12);
+    position: absolute;
+    top: -20px;
+    left: 20px;
+    line-height: 1;
+  }
+
+  .pullquote p {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-style: italic;
+    line-height: 1.6;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .pullquote cite {
+    display: block;
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    font-style: normal;
+  }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: #0d0d14;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    padding: 28px;
+    margin: 32px 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 2;
+    color: #a0d8ef;
+    overflow-x: auto;
+  }
+
+  .code-block .comment { color: var(--muted); }
+  .code-block .keyword { color: var(--accent); }
+  .code-block .string { color: var(--accent3); }
+
+  /* LOOP DIAGRAM */
+  .loop-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 48px 0;
+    flex-wrap: wrap;
+  }
+
+  .loop-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px 20px;
+    text-align: center;
+    min-width: 110px;
+    position: relative;
+    transition: border-color 0.3s, background 0.3s;
+  }
+
+  .loop-step:hover {
+    border-color: var(--accent);
+    background: rgba(232,255,71,0.04);
+  }
+
+  .loop-step-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    margin-bottom: 6px;
+  }
+
+  .loop-step-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .loop-arrow {
+    color: var(--muted);
+    font-size: 18px;
+    padding: 0 4px;
+    font-family: var(--mono);
+  }
+
+  /* STATS GRID */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    margin: 48px 0;
+    border: 1px solid var(--border);
+  }
+
+  .stat-cell {
+    background: var(--surface);
+    padding: 32px 24px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 36px;
+    font-weight: 500;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .stat-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* CALLOUT BOX */
+  .callout {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 32px;
+    margin: 40px 0;
+    position: relative;
+  }
+
+  .callout-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 16px;
+  }
+
+  .callout p { margin: 0; }
+
+  /* SECTION DIVIDER */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin: 80px 0 64px;
+  }
+
+  .section-divider::before,
+  .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section-divider-icon {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+  }
+
+  /* COMPARISON TABLE */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 40px 0;
+    font-size: 14px;
+  }
+
+  .compare-table th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-align: left;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+
+  .compare-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(30,30,46,0.6);
+    color: #b0b0c0;
+    line-height: 1.5;
+  }
+
+  .compare-table tr:hover td {
+    background: rgba(255,255,255,0.02);
+  }
+
+  .compare-table .highlight {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* LIMITATIONS */
+  .limitation-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    margin: 40px 0;
+  }
+
+  .limitation-cell {
+    background: var(--surface);
+    padding: 28px;
+  }
+
+  .limitation-cell h4 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .limitation-cell.good h4 { color: var(--accent); }
+  .limitation-cell.bad h4 { color: var(--accent3); }
+
+  .limitation-cell ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .limitation-cell ul li {
+    font-size: 14px;
+    color: #b0b0c0;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+  }
+
+  .limitation-cell ul li::before {
+    content: '›';
+    font-family: var(--mono);
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+
+  .limitation-cell.good ul li::before { color: var(--accent); }
+  .limitation-cell.bad ul li::before { color: var(--accent3); }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 60px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+  }
+
+  footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero h1, .hero-subtitle, .hero-meta, .hero-eyebrow {
+    animation: fadeUp 0.8s ease forwards;
+  }
+
+  .hero-eyebrow { animation-delay: 0.1s; opacity: 0; }
+  .hero h1 { animation-delay: 0.25s; opacity: 0; }
+  .hero-subtitle { animation-delay: 0.4s; opacity: 0; }
+  .hero-meta { animation-delay: 0.55s; opacity: 0; }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    .hero { padding: 60px 24px; }
+    .content-wrapper { padding: 60px 24px; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .limitation-row { grid-template-columns: 1fr; }
+    .hero-meta { gap: 24px; flex-wrap: wrap; }
+    footer { flex-direction: column; gap: 16px; padding: 40px 24px; }
+    .loop-diagram { gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+
+  <div class="hero-eyebrow">Andrej Karpathy · March 2026 · Open Source</div>
+
+  <h1>Auto<em>Research</em>: The AI That Does Science While You Sleep</h1>
+
+  <p class="hero-subtitle">
+    630 lines of Python. One GPU. An AI agent that runs 100 machine learning experiments overnight — and improves itself without any human in the loop.
+  </p>
+
+  <div class="hero-meta">
+    <div class="hero-stat">
+      <span class="hero-stat-num">30K+</span>
+      <span class="hero-stat-label">GitHub stars in 7 days</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hero-stat-num">~100</span>
+      <span class="hero-stat-label">Experiments per night</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hero-stat-num">11%</span>
+      <span class="hero-stat-label">Efficiency gain over 2 days</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hero-stat-num">700</span>
+      <span class="hero-stat-label">Autonomous changes in 48 hrs</span>
+    </div>
+  </div>
+</section>
+
+<!-- INTRO -->
+<div class="content-wrapper">
+
+  <div class="section-label">Introduction</div>
+  <h2>What Just Happened?</h2>
+
+  <p>
+    On March 7, 2026, Andrej Karpathy — OpenAI co-founder, former Tesla AI director, and the man who coined "vibe coding" — pushed a new project to GitHub. <strong>No launch event. No press release. No 20-page technical report.</strong> Just a repo called <em>autoresearch</em> and a few words on X.
+  </p>
+
+  <p>
+    The post gathered <strong>8.6 million views in two days</strong> and the repo hit 30,000 stars in a week — one of the fastest-growing repositories in GitHub history. Why? Because what Karpathy built is deceptively small and philosophically enormous: a system where an AI agent conducts machine learning research autonomously, without any human involvement, running experiments, evaluating outcomes, and continuously improving a model — indefinitely.
+  </p>
+
+  <div class="pullquote">
+    <p>The goal is to engineer your agents to make the fastest research progress indefinitely and without any of your own involvement.</p>
+    <cite>— Andrej Karpathy, March 2026</cite>
+  </div>
+
+  <p>
+    The repo's README begins with a piece of speculative fiction from the future — a world where "frontier AI research used to be done by meat computers in between eating, sleeping, and synchronizing via sound wave interconnect in the ritual of group meeting." It's tongue-in-cheek. But it also lands like a quiet prophecy.
+  </p>
+
+  <div class="section-divider"><span class="section-divider-icon">///</span></div>
+
+  <div class="section-label">Architecture</div>
+  <h2>Inside the Loop: How AutoResearch Actually Works</h2>
+
+  <p>
+    AutoResearch is built on a stripped-down version of <strong>nanochat</strong>, Karpathy's minimal LLM training framework, condensed to a single GPU and a single file. The entire system is deliberately tiny — roughly 630 lines of Python — small enough to fit inside an LLM's context window, which is part of the design.
+  </p>
+
+  <p>There are only three files that matter:</p>
+
+  <div class="code-block">
+<span class="comment"># The three files that run the future of ML research</span>
+
+<span class="keyword">prepare.py</span>   — constants, data prep, runtime utilities <span class="comment">(read-only)</span>
+<span class="keyword">train.py</span>     — model, optimizer, training loop <span class="comment">(agent edits this)</span>
+<span class="keyword">program.md</span>  — agent instructions in plain Markdown <span class="comment">(you write this)</span>
+  </div>
+
+  <p>
+    The human writes a high-level research goal in <code>program.md</code> — a plain Markdown file that acts as a lightweight "skill" or research brief. Then an external AI agent (Claude, Codex, or any LLM with coding capabilities) takes over.
+  </p>
+
+  <h3>The Core Research Loop</h3>
+
+  <p>Here's the cycle the agent runs, again and again, without stopping:</p>
+
+  <div class="loop-diagram">
+    <div class="loop-step"><div class="loop-step-num">01</div><div class="loop-step-label">Read program.md</div></div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step"><div class="loop-step-num">02</div><div class="loop-step-label">Form hypothesis</div></div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step"><div class="loop-step-num">03</div><div class="loop-step-label">Edit train.py</div></div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step"><div class="loop-step-num">04</div><div class="loop-step-label">Run 5-min GPU job</div></div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step"><div class="loop-step-num">05</div><div class="loop-step-label">Measure val_bpb</div></div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step"><div class="loop-step-num">06</div><div class="loop-step-label">Keep or revert</div></div>
+  </div>
+
+  <p>
+    Every experiment runs for <strong>exactly 5 minutes</strong>, regardless of what the agent changes — model architecture, learning rate, batch size, optimizer type. This fixed time budget is a crucial design decision: it makes every experiment directly comparable, since a larger model and a smaller model both get the same compute and are judged by the same standard.
+  </p>
+
+  <p>
+    The performance metric is <strong>val_bpb</strong> — validation bits per byte. This is vocabulary-size-independent, which means the agent can change tokenization strategies or model sizes between runs and still get a fair, apples-to-apples comparison.
+  </p>
+
+  <div class="callout">
+    <div class="callout-title">Engineering Insight</div>
+    <p>The fixed time budget solves the comparison problem elegantly. By making compute constant, you're always measuring <em>what's optimal for your specific hardware in a fixed budget</em>, not which model is globally better. A smaller model that trains more steps in 5 minutes can beat a larger model that takes longer to iterate — and the agent learns this pattern on its own.</p>
+  </div>
+
+  <h3>Git as the Experiment Journal</h3>
+
+  <p>
+    Every successful change is committed to git. Every failed experiment is reverted. The result is a <strong>perfectly legible experiment journal</strong> — the git log becomes a scientific notebook that tracks every hypothesis, what worked, and what didn't. The agent also writes results to a flat <code>results.tsv</code> file after each run.
+  </p>
+
+  <div class="section-divider"><span class="section-divider-icon">///</span></div>
+
+  <div class="section-label">Results</div>
+  <h2>What Happened When Karpathy Let It Run?</h2>
+
+  <p>
+    In an overnight run, Karpathy's agent completed <strong>126 experiments autonomously</strong>, driving validation loss down from 0.9979 to 0.9697 with zero human input. But then Karpathy did something more interesting: he let it run for two full days.
+  </p>
+
+  <div class="stats-grid">
+    <div class="stat-cell">
+      <span class="stat-value">~700</span>
+      <span class="stat-desc">Autonomous code changes over 48 hours</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-value">~20</span>
+      <span class="stat-desc">Additive improvements that transferred to larger models</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-value">11%</span>
+      <span class="stat-desc">Reduction in "Time to GPT-2" metric (2.02 hrs → 1.80 hrs)</span>
+    </div>
+  </div>
+
+  <p>
+    The 11% gain might sound modest, but the context makes it remarkable. Karpathy himself noted the model was already <strong>heavily manually optimized over years of work</strong>. The agent caught oversights in attention scaling and regularization that he had missed through two decades of working in the field. "Seeing the agent do this entire workflow end-to-end and all by itself... is wild," he wrote.
+  </p>
+
+  <div class="pullquote">
+    <p>These are real and substantial gains. All we're doing is optimizing performance per compute.</p>
+    <cite>— Karpathy, responding to skeptics on X</cite>
+  </div>
+
+  <h3>What the Community Found</h3>
+
+  <p>
+    Within days of release, the community began documenting their own runs. One user on X, running the loop on a Mac Mini M4 overnight, found that <strong>"the model got better by getting simpler"</strong> — 26 of 35 experiments failed or crashed, but the 7 that succeeded consistently pointed toward leaner architectures. An insight reached with zero human intervention.
+  </p>
+
+  <p>
+    Harrison Chase, founder of LangChain, published <em>autoresearch-agents</em> within days — adapting the loop for agent optimization rather than model training. Varun Mathur of Hyperspace AI distributed the loop across a peer-to-peer network, running <strong>333 experiments across 35 autonomous agents in a single night</strong>. The emergent patterns were striking: H100 GPUs used "brute force" strategies (aggressive learning rates), while CPU-only agents on laptops were forced to be clever — focusing on initialization strategies and normalization because they couldn't rely on raw throughput.
+  </p>
+
+  <div class="section-divider"><span class="section-divider-icon">///</span></div>
+
+  <div class="section-label">Design Philosophy</div>
+  <h2>Why Simplicity Is the Innovation</h2>
+
+  <p>
+    One of the most counterintuitive things about AutoResearch is that its minimalism is a feature, not a constraint. Karpathy deliberately kept the entire system small enough to fit inside an LLM context window — because <strong>the agent needs to understand everything it's working with</strong>.
+  </p>
+
+  <p>
+    This philosophy has three concrete engineering consequences:
+  </p>
+
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Constraint</th>
+        <th>Engineering Reason</th>
+        <th>Effect</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Fixed 5-min time budget</strong></td>
+        <td>Makes experiments platform-comparable</td>
+        <td class="highlight">Any hypothesis can be fairly tested</td>
+      </tr>
+      <tr>
+        <td><strong>Single editable file</strong></td>
+        <td>Keeps search space interpretable</td>
+        <td class="highlight">Every change is reviewable as a clean diff</td>
+      </tr>
+      <tr>
+        <td><strong>Single scalar metric</strong></td>
+        <td>Eliminates judgment ambiguity</td>
+        <td class="highlight">Agent can't be fooled by proxy metrics</td>
+      </tr>
+      <tr>
+        <td><strong>No external infra</strong></td>
+        <td>Just PyTorch + 3 files</td>
+        <td class="highlight">Reproducible by anyone with a GPU</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The single scalar metric point is particularly important. Karpathy chose <strong>val_bpb because it requires no human judgment to interpret</strong> — the number either goes down or it doesn't. Goodhart's Law (when a measure becomes a target, it ceases to be a good measure) applies with particular force to an agent running 100 experiments per night with no off switch. The metric must be clean.
+  </p>
+
+  <div class="section-divider"><span class="section-divider-icon">///</span></div>
+
+  <div class="section-label">Broader Implications</div>
+  <h2>Beyond ML: The "Loop" as a Universal Pattern</h2>
+
+  <p>
+    The most important thing about AutoResearch is not that it improves LLM training. It's that it demonstrates a <strong>generalizable pattern for autonomous optimization</strong> in any domain where you can define a single scalar metric and a mutable artifact.
+  </p>
+
+  <p>The loop is just: <strong>Modify → Run → Measure → Keep or Revert → Repeat</strong>. Applied universally, this pattern already has working forks in:
+  </p>
+
+  <div class="callout">
+    <div class="callout-title">Domains Where the Loop Already Works</div>
+    <p>
+      <strong>pi-autoresearch</strong> — optimizes test speed, bundle size, and Lighthouse scores for web apps.<br><br>
+      <strong>autoresearch-agents</strong> (Harrison Chase) — optimizes AI agent behavior and routing strategies.<br><br>
+      <strong>Customer support routing</strong> — editable asset is a routing config; metric is classification accuracy against a labelled holdout set.<br><br>
+      <strong>Database query optimization</strong> — editable asset is a query plan; metric is execution time.<br><br>
+      <strong>A/B testing</strong> — editable asset is a UI config; metric is conversion rate.
+    </p>
+  </div>
+
+  <p>
+    The key insight, articulated by The New Stack's analysis, is that <strong>the primary investment required is in document authorship</strong> rather than infrastructure. You're not writing code — you're writing the Markdown that tells the agent how to write code. The human becomes the meta-researcher, designing the experiment design, not running the experiments.
+  </p>
+
+  <div class="section-divider"><span class="section-divider-icon">///</span></div>
+
+  <div class="section-label">Limitations</div>
+  <h2>What AutoResearch Cannot Do</h2>
+
+  <div class="limitation-row">
+    <div class="limitation-cell good">
+      <h4>✓ Where It Excels</h4>
+      <ul>
+        <li>Hyperparameter and architecture search in a well-defined space</li>
+        <li>Finding non-obvious combinations that humans would overlook</li>
+        <li>Hardware-specific optimization (finds what's best for <em>your</em> GPU)</li>
+        <li>Validating intuitions overnight instead of over weeks</li>
+        <li>Any domain with a clean scalar metric and a mutable config</li>
+      </ul>
+    </div>
+    <div class="limitation-cell bad">
+      <h4>✗ Current Limitations</h4>
+      <ul>
+        <li>Cannot generate genuinely novel research ideas from scratch</li>
+        <li>Results are hardware-specific and may not generalize across platforms</li>
+        <li>Noisy results — small gains can be statistical noise</li>
+        <li>Can get trapped in local optima</li>
+        <li>Requires a good metric; bad metrics get ruthlessly exploited</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>
+    Karpathy is transparent about these constraints. The repo notes that results become <strong>non-comparable between different compute platforms</strong> — what works on an H100 may not transfer to a Mac Mini M4, and vice versa. The community has begun treating this as a feature (hardware diversity as exploration diversity) rather than a bug.
+  </p>
+
+  <div class="section-divider"><span class="section-divider-icon">///</span></div>
+
+  <div class="section-label">Ecosystem</div>
+  <h2>Seven Days, An Entire Ecosystem</h2>
+
+  <p>
+    One of the most remarkable things about AutoResearch is what grew around it in under a week. Because the repo is minimal, MIT-licensed, and designed around three simple files, forking and adapting it is trivial. The community obliged.
+  </p>
+
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Fork / Project</th>
+        <th>What It Does</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>autoresearch-mlx</strong></td>
+        <td>Apple Silicon port using MLX instead of PyTorch/CUDA — runs natively on MacBooks and Mac Minis</td>
+      </tr>
+      <tr>
+        <td><strong>n-autoresearch</strong></td>
+        <td>Multi-GPU parallelism with structured experiment tracking, REST API for hypothesis registration</td>
+      </tr>
+      <tr>
+        <td><strong>autoresearch-agents</strong> (LangChain)</td>
+        <td>Applies the loop to agent optimization — modify routing logic, test against holdout, keep or revert</td>
+      </tr>
+      <tr>
+        <td><strong>Hyperspace distributed loop</strong></td>
+        <td>35 autonomous agents across a P2P network; 333 experiments in one night</td>
+      </tr>
+      <tr>
+        <td><strong>autoexp (generic)</strong></td>
+        <td>Fully generalized version: same loop, any domain, any quantifiable metric</td>
+      </tr>
+      <tr>
+        <td><strong>pi-autoresearch</strong></td>
+        <td>Applies the loop to web performance metrics: bundle size, test speed, Lighthouse scores</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="section-divider"><span class="section-divider-icon">///</span></div>
+
+  <div class="section-label">Conclusion</div>
+  <h2>The Beginning of Something Larger</h2>
+
+  <p>
+    AutoResearch is not the end state. It doesn't replace human researchers, it doesn't generate paradigm-shifting theoretical breakthroughs, and it won't autonomously solve alignment. But it does something subtler and arguably more important: <strong>it lowers the floor for what counts as "running experiments."</strong>
+  </p>
+
+  <p>
+    Before AutoResearch, running 100 experiments meant weeks of researcher time across multiple GPUs with careful manual bookkeeping. After AutoResearch, it means going to sleep and waking up. The compression of that timeline — from weeks to one night — changes what's tractable to explore. It changes which hypotheses are worth testing. It changes the economics of ML research entirely.
+  </p>
+
+  <p>
+    Karpathy himself frames it with characteristic wit in the repo's README: this is "the story of how it all began." The vision at the end of that sentence — swarms of AI agents running across compute cluster megastructures, 10,205 generations deep into a codebase no human could comprehend — reads as science fiction. But AutoResearch is the first commit.
+  </p>
+
+  <div class="pullquote">
+    <p>Vibe coding has leveled up. This is vibe science.</p>
+    <cite>— AI community reaction to AutoResearch's release</cite>
+  </div>
+
+  <p>
+    The real innovation is the paradigm: <strong>you are no longer the experimenter. You are the designer of the experiment engine.</strong> Your job is to write clear instructions in a Markdown file and define what "better" means. The rest happens while you sleep.
+  </p>
+
+  <p>
+    For anyone building in ML, systems engineering, or anywhere that optimization matters — the question is no longer whether to use this pattern. The question is what metric you're going to define, and how good your <code>program.md</code> is.
+  </p>
+
+</div>
+
+<footer>
+  <div>
+    <div style="margin-bottom:8px;">karpathy/autoresearch · <a href="https://github.com/karpathy/autoresearch" target="_blank">github.com/karpathy/autoresearch</a></div>
+    <div style="color: #555;">MIT License · Released March 2026</div>
+  </div>
+  <div style="text-align:right;">
+    <div style="margin-bottom:4px;">Written March 2026</div>
+    <div style="color:#555;">Based on public sources & GitHub repo</div>
+  </div>
+</footer>
+
+</body>
+</html>
