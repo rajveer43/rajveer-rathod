@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CallFlow Tracer - Rajveer Rathod</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary:    #e84393;
+            --dark:       #0d0d0d;
+            --darker:     #080808;
+            --card:       #141414;
+            --border:     #222;
+            --text:       #ccc;
+            --text-light: #888;
+            --white:      #fff;
+            --code-bg:    #0f1117;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--darker);
+            color: var(--text);
+            line-height: 1.8;
+            font-size: 15px;
+        }
+
+        a { color: var(--primary); text-decoration: none; transition: color .2s; }
+        a:hover { color: #ff6ab0; }
+
+        /* ── NAVBAR ── */
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(10,10,10,.96);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 0;
+        }
+        .nav-inner {
+            max-width: 1100px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 24px;
+        }
+        .nav-brand { font-size: 1.4rem; font-weight: 700; color: var(--white); }
+        .nav-brand span { color: var(--primary); }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { color: #aaa; font-size: .85rem; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; }
+        .nav-links a:hover, .nav-links a.active { color: var(--primary); }
+
+        /* ── HERO ── */
+        .hero {
+            margin-top: 65px;
+            background: linear-gradient(135deg, #0d0d0d 0%, #12001a 50%, #0d0d0d 100%);
+            padding: 80px 24px 60px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse 60% 60% at 50% 0%, rgba(232,67,147,.15), transparent);
+            pointer-events: none;
+        }
+        .hero-tag {
+            display: inline-block;
+            background: rgba(232,67,147,.12);
+            border: 1px solid rgba(232,67,147,.3);
+            color: var(--primary);
+            font-size: .75rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+            padding: 6px 18px; border-radius: 50px; margin-bottom: 20px;
+        }
+        .hero h1 {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 800; color: var(--white);
+            line-height: 1.25; max-width: 760px; margin: 0 auto 20px;
+        }
+        .hero h1 span { color: var(--primary); }
+        .hero-meta {
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 20px;
+            font-size: .8rem; color: var(--text-light);
+        }
+        .hero-meta span { display: flex; align-items: center; gap: 6px; }
+        .hero-meta i { color: var(--primary); }
+
+        /* ── LAYOUT ── */
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+        .layout { display: grid; grid-template-columns: 1fr 300px; gap: 48px; padding: 60px 0 80px; }
+        @media(max-width:900px){ .layout { grid-template-columns: 1fr; } }
+
+        /* ── ARTICLE ── */
+        .article h2 {
+            font-size: 1.5rem; font-weight: 700; color: var(--white);
+            margin: 44px 0 14px; padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+        }
+        .article h2:first-child { margin-top: 0; }
+        .article h3 { font-size: 1.1rem; font-weight: 600; color: var(--white); margin: 28px 0 10px; }
+        .article p { margin-bottom: 18px; color: #bbb; }
+        .article ul, .article ol { margin: 0 0 18px 24px; color: #bbb; }
+        .article li { margin-bottom: 6px; }
+        .article strong { color: var(--white); font-weight: 600; }
+
+        /* callout box */
+        .callout {
+            background: rgba(232,67,147,.06);
+            border-left: 3px solid var(--primary);
+            border-radius: 0 8px 8px 0;
+            padding: 18px 22px; margin: 28px 0;
+            font-size: .9rem; color: #ccc;
+        }
+        .callout strong { color: var(--primary); display: block; margin-bottom: 6px; }
+
+        /* code */
+        pre {
+            background: var(--code-bg);
+            border: 1px solid #1e1e2e;
+            border-radius: 10px;
+            padding: 22px 24px; margin: 22px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: .82rem; line-height: 1.7;
+            color: #a9b1d6;
+            position: relative;
+        }
+        pre .comment { color: #565f89; }
+        pre .keyword { color: #bb9af7; }
+        pre .string  { color: #9ece6a; }
+        pre .func    { color: #7aa2f7; }
+
+        /* steps */
+        .steps { counter-reset: step; margin: 22px 0; }
+        .step {
+            display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start;
+        }
+        .step-num {
+            counter-increment: step;
+            min-width: 32px; height: 32px; border-radius: 50%;
+            background: var(--primary); color: var(--white);
+            font-size: .8rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; margin-top: 2px;
+        }
+        .step-text { color: #bbb; }
+        .step-text strong { color: var(--white); }
+
+        /* comparison table */
+        .table-wrap { overflow-x: auto; margin: 28px 0; border-radius: 12px; border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+        thead tr { background: #1a1a1a; }
+        thead th {
+            padding: 14px 16px; text-align: center; color: var(--white);
+            font-weight: 600; letter-spacing: .04em; font-size: .75rem; text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
+        thead th:first-child { text-align: left; }
+        tbody tr { border-bottom: 1px solid #1a1a1a; transition: background .15s; }
+        tbody tr:hover { background: rgba(255,255,255,.03); }
+        tbody tr.highlight { background: rgba(232,67,147,.06); border-left: 3px solid var(--primary); }
+        tbody td { padding: 13px 16px; text-align: center; color: #aaa; }
+        tbody td:first-child { text-align: left; font-weight: 600; color: var(--white); }
+        .badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 50px; font-size: .72rem; font-weight: 600;
+        }
+        .badge-green  { background: rgba(74,222,128,.12); color: #4ade80; }
+        .badge-red    { background: rgba(248,113,113,.12); color: #f87171; }
+        .badge-amber  { background: rgba(251,191,36,.12);  color: #fbbf24; }
+        .badge-purple { background: rgba(167,139,250,.12); color: #a78bfa; }
+
+        /* feature grid */
+        .feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin: 28px 0; }
+        .feat-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 22px;
+            transition: border-color .2s, transform .2s;
+        }
+        .feat-card:hover { border-color: var(--primary); transform: translateY(-3px); }
+        .feat-icon { font-size: 1.4rem; margin-bottom: 10px; }
+        .feat-card h4 { color: var(--white); font-size: .95rem; font-weight: 600; margin-bottom: 6px; }
+        .feat-card p  { font-size: .82rem; color: #888; margin: 0; line-height: 1.6; }
+
+        /* use-case cards */
+        .use-cases { display: grid; gap: 16px; margin: 22px 0; }
+        .use-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 20px 22px;
+            display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start;
+        }
+        .use-num {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: rgba(232,67,147,.12); border: 1px solid rgba(232,67,147,.25);
+            color: var(--primary); font-weight: 700; font-size: .9rem;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .use-card h4 { color: var(--white); font-size: .95rem; font-weight: 600; margin-bottom: 4px; }
+        .use-card p  { color: #888; font-size: .83rem; margin: 0; }
+
+        /* kbd shortcut */
+        kbd {
+            background: #1e1e2e; border: 1px solid #333;
+            border-radius: 5px; padding: 2px 8px;
+            font-family: monospace; font-size: .8rem; color: #a9b1d6;
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar { display: flex; flex-direction: column; gap: 28px; }
+        .sidebar-box {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 24px;
+        }
+        .sidebar-box h3 {
+            font-size: .8rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .1em; color: var(--primary); margin-bottom: 16px;
+        }
+
+        /* author card */
+        .author-card { text-align: center; }
+        .author-avatar {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #a020f0);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem; font-weight: 800; color: var(--white);
+            margin: 0 auto 14px;
+        }
+        .author-card h4 { color: var(--white); font-weight: 700; margin-bottom: 4px; }
+        .author-card p  { font-size: .78rem; color: #888; margin-bottom: 16px; line-height: 1.5; }
+        .btn-portfolio {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--primary); color: var(--white);
+            padding: 10px 20px; border-radius: 8px;
+            font-size: .8rem; font-weight: 600; letter-spacing: .04em;
+            transition: background .2s, transform .15s;
+        }
+        .btn-portfolio:hover { background: #ff6ab0; color: var(--white); transform: translateY(-2px); }
+        .social-row { display: flex; justify-content: center; gap: 12px; margin-top: 14px; }
+        .social-row a {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: #1e1e1e; border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            color: #888; font-size: .85rem; transition: all .2s;
+        }
+        .social-row a:hover { background: var(--primary); border-color: var(--primary); color: var(--white); }
+
+        /* toc */
+        .toc-list { list-style: none; }
+        .toc-list li { border-bottom: 1px solid var(--border); }
+        .toc-list li:last-child { border-bottom: none; }
+        .toc-list a {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 0; color: #888; font-size: .82rem;
+            transition: color .2s; 
+        }
+        .toc-list a::before { content: '→'; color: var(--primary); font-size: .7rem; }
+        .toc-list a:hover { color: var(--primary); }
+
+        /* tags */
+        .tag-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag {
+            background: #1a1a1a; border: 1px solid var(--border);
+            color: #888; font-size: .72rem; padding: 4px 12px;
+            border-radius: 50px; transition: all .2s;
+        }
+        .tag:hover { background: var(--primary); border-color: var(--primary); color: var(--white); }
+
+        /* resources */
+        .resource-list { list-style: none; }
+        .resource-list li { margin-bottom: 10px; }
+        .resource-list a {
+            display: flex; align-items: center; gap: 8px;
+            color: #888; font-size: .82rem; transition: color .2s;
+        }
+        .resource-list a i { color: var(--primary); width: 14px; }
+        .resource-list a:hover { color: var(--primary); }
+
+        /* ── DIVIDER ── */
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border), transparent);
+            margin: 40px 0;
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            padding: 60px 0 30px;
+        }
+        .footer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px; margin-bottom: 40px; }
+        .footer-col h4 {
+            color: var(--white); font-size: .85rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px;
+        }
+        .footer-col p { color: #666; font-size: .82rem; line-height: 1.7; }
+        .footer-links { list-style: none; }
+        .footer-links li { margin-bottom: 8px; }
+        .footer-links a { color: #666; font-size: .82rem; transition: color .2s; }
+        .footer-links a:hover { color: var(--primary); }
+        .footer-contact li { color: #666; font-size: .8rem; margin-bottom: 10px; display: flex; gap: 8px; align-items: flex-start; }
+        .footer-contact i { color: var(--primary); margin-top: 3px; flex-shrink: 0; }
+        .footer-bottom { text-align: center; color: #444; font-size: .75rem; padding-top: 28px; border-top: 1px solid var(--border); }
+        .footer-social { display: flex; gap: 10px; margin-top: 16px; }
+        .footer-social a {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: #1e1e1e; border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            color: #888; font-size: .85rem; transition: all .2s;
+        }
+        .footer-social a:hover { background: var(--primary); border-color: var(--primary); color: var(--white); }
+
+        /* ── SCROLL PROGRESS ── */
+        #progress-bar {
+            position: fixed; top: 65px; left: 0; height: 2px;
+            background: var(--primary); width: 0%; z-index: 999;
+            transition: width .1s linear;
+        }
+
+        /* ── BACK TO TOP ── */
+        #back-top {
+            position: fixed; bottom: 28px; right: 28px; z-index: 999;
+            width: 42px; height: 42px; border-radius: 50%;
+            background: var(--primary); color: var(--white);
+            display: flex; align-items: center; justify-content: center;
+            font-size: .85rem; cursor: pointer; opacity: 0;
+            transition: opacity .3s, transform .2s;
+            border: none;
+        }
+        #back-top.show { opacity: 1; }
+        #back-top:hover { transform: translateY(-3px); }
+    </style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- ── NAVBAR ── -->
+<nav class="navbar">
+    <div class="nav-inner">
+        <a class="nav-brand" href="../index.html"><span>R</span>ajveer Rathod</a>
+        <ul class="nav-links">
+            <li><a href="../index.html#home-section">Home</a></li>
+            <li><a href="../index.html#about-section">About</a></li>
+            <li><a href="../index.html#resume-section">Resume</a></li>
+            <li><a href="../index.html#contact-section">Contact</a></li>
+            <li><a href="blogs.html" class="active">Blog</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+    <div class="hero-tag">Python · VS Code · Developer Tools</div>
+    <h1>I Was Mentally Tracing Python Call Stacks for Hours.<br><span>Then I Created This.</span></h1>
+    <div class="hero-meta">
+        <span><i class="fa fa-calendar"></i> March 21, 2026</span>
+        <span><i class="fa fa-user"></i> Rajveer Rathod</span>
+        <span><i class="fa fa-clock-o"></i> 10 min read</span>
+        <span><i class="fa fa-tag"></i> Python, VS Code, Debugging</span>
+    </div>
+</section>
+
+<!-- ── MAIN CONTENT ── -->
+<div class="container">
+    <div class="layout">
+
+        <!-- ARTICLE -->
+        <article class="article">
+
+            <div class="callout">
+                <strong>TL;DR</strong>
+                CallFlow Tracer is a VS Code extension that turns your Python code's execution into an interactive visual graph — call relationships, performance flamegraphs, async timelines, and OpenTelemetry export, all without leaving your editor.
+            </div>
+
+            <h2>The Problem Nobody Talks About Enough</h2>
+            <p>Have you ever opened a Python file you didn't write, stared at it for 20 minutes, and still had no idea how it actually <em>runs</em>?</p>
+            <p>Or maybe you've spent a full afternoon chasing a performance bug, adding <code style="background:#1a1a2e;padding:2px 7px;border-radius:4px;font-family:monospace;color:#a9b1d6;font-size:.85em">print()</code> statements like breadcrumbs through a forest, only to discover the bottleneck was buried three levels deep in a helper function you forgot existed?</p>
+            <p>We spend a <em>lot</em> of time talking about writing code — clean code, SOLID principles, design patterns. But we don't talk nearly enough about <strong>reading and understanding code</strong>, which is where most of your actual working hours go.</p>
+            <p>Your existing options? <code style="background:#1a1a2e;padding:2px 7px;border-radius:4px;font-family:monospace;color:#a9b1d6;font-size:.85em">cProfile</code> outputs walls of text. <code style="background:#1a1a2e;padding:2px 7px;border-radius:4px;font-family:monospace;color:#a9b1d6;font-size:.85em">py-spy</code> lives in your terminal. Manual print debugging is timeless but you know how that goes.</p>
+            <p>What if your editor just <em>showed you</em> how the code runs?</p>
+
+            <h2>Enter CallFlow Tracer</h2>
+            <p><strong>CallFlow Tracer</strong> is an open-source Python library that traces function execution and renders it as an interactive call graph. The VS Code extension brings this directly into your editor — no terminal juggling, no separate tools.</p>
+            <p>Here's the simplest possible way to use it:</p>
+            <div class="steps">
+                <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Open any Python file</strong> in VS Code</div></div>
+                <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Right-click</strong> in the editor</div></div>
+                <div class="step"><div class="step-num">3</div><div class="step-text">Hit <strong>"CallFlow: Trace Current File"</strong></div></div>
+            </div>
+            <p>A side panel opens with a live, interactive network graph — function nodes, call relationships, execution times, color-coded by module. Slow functions glow red. Fast ones stay green.</p>
+
+            <h2>Installing It</h2>
+            <p><strong>From the VS Code Marketplace:</strong> Press <kbd>Ctrl+Shift+X</kbd> (or <kbd>Cmd+Shift+X</kbd> on Mac), search <em>"CallFlow Tracer"</em>, and click Install. The extension handles the Python package automatically.</p>
+            <p>Or install the package manually:</p>
+            <pre><span class="comment"># Install the Python library</span>
+pip install callflow-tracer
+
+<span class="comment"># Or install from source</span>
+cd /path/to/callflow-tracer/vscode-extension
+code --install-extension callflow-tracer-2.0.0.vsix</pre>
+
+            <h2>The Features That Actually Matter</h2>
+
+            <div class="feat-grid">
+                <div class="feat-card">
+                    <div class="feat-icon">🕸️</div>
+                    <h4>Interactive Call Graphs</h4>
+                    <p>Force-directed, Hierarchical, Circular, and Timeline layouts. Filter by module, search functions, zoom and pan.</p>
+                </div>
+                <div class="feat-card">
+                    <div class="feat-icon">🔥</div>
+                    <h4>Flamegraph View</h4>
+                    <p>Classic performance visualization. Green = fast, Red = slow. Click any bar to drill into specific call paths.</p>
+                </div>
+                <div class="feat-card">
+                    <div class="feat-icon">⚡</div>
+                    <h4>Async / Await Support</h4>
+                    <p>Timeline layout shows concurrent coroutine execution. Spot sequential awaits that could be parallelized.</p>
+                </div>
+                <div class="feat-card">
+                    <div class="feat-icon">📡</div>
+                    <h4>OpenTelemetry Export</h4>
+                    <p>Export traces to Jaeger, Honeycomb, Datadog — any OTel-compatible backend. Bridge local dev and production.</p>
+                </div>
+                <div class="feat-card">
+                    <div class="feat-icon">🎯</div>
+                    <h4>Trace Selected Functions</h4>
+                    <p>Focus on one function and everything it calls. Perfect for third-party library analysis.</p>
+                </div>
+                <div class="feat-card">
+                    <div class="feat-icon">🤖</div>
+                    <h4>Auto-Instrumentation</h4>
+                    <p>Traces requests, Redis, boto3, SQLAlchemy, psycopg2 automatically — no code changes needed.</p>
+                </div>
+            </div>
+
+            <h3>Flamegraph View</h3>
+            <p>If you're debugging performance specifically, switch to the Flamegraph view:</p>
+            <pre><span class="comment"># Command Palette</span>
+<span class="func">CallFlow: Show Flamegraph</span></pre>
+            <p>Same view you'd get from a production APM tool, for your local code, with zero setup.</p>
+
+            <h3>Auto-Trace on Save</h3>
+            <p>For active development sessions, turn on automatic tracing in <code style="background:#1a1a2e;padding:2px 7px;border-radius:4px;font-family:monospace;color:#a9b1d6;font-size:.85em">settings.json</code>:</p>
+            <pre>{
+  <span class="string">"callflowTracer.pythonPath"</span>: <span class="string">"python3"</span>,
+  <span class="string">"callflowTracer.defaultLayout"</span>: <span class="string">"force"</span>,
+  <span class="string">"callflowTracer.autoTrace"</span>: <span class="keyword">true</span>,
+  <span class="string">"callflowTracer.enableProfiling"</span>: <span class="keyword">true</span>,
+  <span class="string">"callflowTracer.anomalyThreshold"</span>: <span class="keyword">2.0</span>,
+  <span class="string">"callflowTracer.autoInstrumentation"</span>: <span class="keyword">true</span>
+}</pre>
+            <p>Every save triggers a fresh trace. Instant feedback on how your changes affect call graphs and execution times.</p>
+
+            <h3>Using It from Code</h3>
+            <pre><span class="keyword">from</span> callflow_tracer <span class="keyword">import</span> trace_scope
+
+<span class="keyword">with</span> <span class="func">trace_scope</span>() <span class="keyword">as</span> graph:
+    <span class="func">your_function</span>()
+
+<span class="comment"># Export for VS Code visualization later</span>
+graph.<span class="func">export</span>(<span class="string">"trace.json"</span>)</pre>
+
+            <h2>Real Scenarios Where This Shines</h2>
+            <div class="use-cases">
+                <div class="use-card">
+                    <div class="use-num">1</div>
+                    <div>
+                        <h4>Legacy Codebase Onboarding</h4>
+                        <p>Open the main entry point, run the trace, instantly get a map of what calls what. No more reading bottom-up trying to piece together execution flow mentally.</p>
+                    </div>
+                </div>
+                <div class="use-card">
+                    <div class="use-num">2</div>
+                    <div>
+                        <h4>Slow API Endpoint</h4>
+                        <p>Trace the handler, open the flamegraph, find the wide red bar. No more guessing which of your twelve database calls is the problem.</p>
+                    </div>
+                </div>
+                <div class="use-card">
+                    <div class="use-num">3</div>
+                    <div>
+                        <h4>Async Code Debugging</h4>
+                        <p>Timeline layout shows concurrent coroutine execution across time. Identify sequential await patterns that should be parallelized.</p>
+                    </div>
+                </div>
+                <div class="use-card">
+                    <div class="use-num">4</div>
+                    <div>
+                        <h4>Code Review Aid</h4>
+                        <p>Trace the PR code, export as PNG, attach to your review comment. "This function gets called 47 times per request" lands harder than a text comment.</p>
+                    </div>
+                </div>
+                <div class="use-card">
+                    <div class="use-num">5</div>
+                    <div>
+                        <h4>Production Debugging</h4>
+                        <p>Reproduce locally, trace, export to OTel, compare against production traces. Correlation between local and production is often surprisingly close.</p>
+                    </div>
+                </div>
+            </div>
+
+            <h2>How It Compares</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tool</th>
+                            <th>Visualization</th>
+                            <th>Interactive</th>
+                            <th>Async</th>
+                            <th>OTel Export</th>
+                            <th>Jaeger</th>
+                            <th>VS Code</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="highlight">
+                            <td>CallFlow Tracer</td>
+                            <td><span class="badge badge-green">✅ Yes</span></td>
+                            <td><span class="badge badge-green">✅ Yes</span></td>
+                            <td><span class="badge badge-green">✅ Full</span></td>
+                            <td><span class="badge badge-green">✅ Yes</span></td>
+                            <td><span class="badge badge-purple">⚙️ Soon</span></td>
+                            <td><span class="badge badge-green">✅ Native</span></td>
+                        </tr>
+                        <tr>
+                            <td>cProfile</td>
+                            <td><span class="badge badge-red">❌ Text</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                            <td><span class="badge badge-amber">⚠️ Limited</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                        </tr>
+                        <tr>
+                            <td>py-spy</td>
+                            <td><span class="badge badge-amber">⚠️ Flame</span></td>
+                            <td><span class="badge badge-amber">⚠️ CLI</span></td>
+                            <td><span class="badge badge-green">✅ Yes</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                        </tr>
+                        <tr>
+                            <td>PyInstrument</td>
+                            <td><span class="badge badge-amber">⚠️ Flame</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                            <td><span class="badge badge-green">✅ Yes</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                        </tr>
+                        <tr>
+                            <td>Jaeger Client</td>
+                            <td><span class="badge badge-red">❌ None</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                            <td><span class="badge badge-green">✅ Yes</span></td>
+                            <td><span class="badge badge-green">✅ Yes</span></td>
+                            <td><span class="badge badge-green">✅ Native</span></td>
+                            <td><span class="badge badge-red">❌ No</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="callout">
+                <strong>Try It in 30 Seconds</strong>
+                Open VS Code → <kbd>Ctrl+Shift+X</kbd> → Search "CallFlow Tracer" → Install → Open any Python file → Right-click → "CallFlow: Trace Current File". That's it.
+            </div>
+
+        </article>
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <!-- Author -->
+            <div class="sidebar-box author-card">
+                <div class="author-avatar">R</div>
+                <h4>Rajveer Rathod</h4>
+                <p>Full Stack ML Engineer working on AI based Software solutions & Hardware based solutions &amp; production-grade data systems.</p>
+                <a href="../index.html" class="btn-portfolio">
+                    <i class="fa fa-user"></i> View Portfolio
+                </a>
+                <div class="social-row">
+                    <a href="https://twitter.com/Rajveer13Rathod" target="_blank"><i class="fa fa-twitter"></i></a>
+                    <a href="https://www.linkedin.com/in/rajveer-rathod/" target="_blank"><i class="fa fa-linkedin"></i></a>
+                    <a href="https://www.github.com/rajveer43/" target="_blank"><i class="fa fa-github"></i></a>
+                    <a href="https://www.instagram.com/rajveer.sinh.3101/" target="_blank"><i class="fa fa-instagram"></i></a>
+                </div>
+            </div>
+
+            <!-- Table of Contents -->
+            <div class="sidebar-box">
+                <h3>Contents</h3>
+                <ul class="toc-list">
+                    <li><a href="#the-problem">The Problem</a></li>
+                    <li><a href="#enter-callflow">Enter CallFlow Tracer</a></li>
+                    <li><a href="#installing">Installing It</a></li>
+                    <li><a href="#features">Key Features</a></li>
+                    <li><a href="#use-cases">Real Use Cases</a></li>
+                    <li><a href="#comparison">How It Compares</a></li>
+                </ul>
+            </div>
+
+            <!-- Tags -->
+            <div class="sidebar-box">
+                <h3>Tags</h3>
+                <div class="tag-cloud">
+                    <a href="#" class="tag">Python</a>
+                    <a href="#" class="tag">VS Code</a>
+                    <a href="#" class="tag">Debugging</a>
+                    <a href="#" class="tag">Performance</a>
+                    <a href="#" class="tag">OpenTelemetry</a>
+                    <a href="#" class="tag">Async</a>
+                    <a href="#" class="tag">Profiling</a>
+                    <a href="#" class="tag">Developer Tools</a>
+                </div>
+            </div>
+
+            <!-- Resources -->
+            <div class="sidebar-box">
+                <h3>Resources</h3>
+                <ul class="resource-list">
+                    <li><a href="https://github.com/rajveer43/callflow-tracer" target="_blank"><i class="fa fa-github"></i> GitHub Repository</a></li>
+                    <li><a href="https://pypi.org/project/callflow-tracer/" target="_blank"><i class="fa fa-cube"></i> PyPI Package</a></li>
+                    <li><a href="https://marketplace.visualstudio.com/items?itemName=rajveer43.callflow-tracer" target="_blank"><i class="fa fa-code"></i> VS Code Marketplace</a></li>
+                    <li><a href="https://github.com/rajveer43/callflow-tracer/blob/main/README.md" target="_blank"><i class="fa fa-book"></i> Documentation</a></li>
+                </ul>
+            </div>
+
+            <!-- Back to blog -->
+            <div class="sidebar-box" style="text-align:center;">
+                <h3>More Articles</h3>
+                <a href="blogs.html" style="display:inline-flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid var(--border);color:#aaa;padding:10px 18px;border-radius:8px;font-size:.82rem;font-weight:500;transition:all .2s" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='#aaa'">
+                    <i class="fa fa-arrow-left"></i> All Blog Posts
+                </a>
+            </div>
+
+        </aside>
+    </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h4>About</h4>
+                <p>Experienced Professional with experience in building and delivering scalable AI and Hardware Based software solution.</p>
+                <div class="footer-social">
+                    <a href="https://twitter.com/Rajveer13Rathod" target="_blank"><i class="fa fa-twitter"></i></a>
+                    <a href="https://www.instagram.com/rajveer.sinh.3101/" target="_blank"><i class="fa fa-instagram"></i></a>
+                    <a href="https://www.linkedin.com/in/rajveer-rathod/" target="_blank"><i class="fa fa-linkedin"></i></a>
+                    <a href="https://www.github.com/rajveer43/" target="_blank"><i class="fa fa-github"></i></a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>Links</h4>
+                <ul class="footer-links">
+                    <li><a href="../index.html#home-section">→ Home</a></li>
+                    <li><a href="../index.html#about-section">→ About</a></li>
+                    <li><a href="../index.html#resume-section">→ Resume</a></li>
+                    <li><a href="../index.html#contact-section">→ Contact</a></li>
+                    <li><a href="blogs.html">→ All Blogs</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <ul class="footer-contact" style="list-style:none">
+                    <li><i class="fa fa-map-marker"></i> Gujarat, India</li>
+                    <li><i class="fa fa-envelope"></i> rajveer.rathod1301@gmail.com</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Copyright &copy; <script>document.write(new Date().getFullYear())</script> All rights reserved | Made with ♥ by Rajveer Rathod</p>
+        </div>
+    </div>
+</footer>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <i class="fa fa-arrow-up"></i>
+</button>
+
+<script>
+    // Scroll progress bar
+    window.addEventListener('scroll', () => {
+        const doc = document.documentElement;
+        const scrolled = doc.scrollTop / (doc.scrollHeight - doc.clientHeight) * 100;
+        document.getElementById('progress-bar').style.width = scrolled + '%';
+        const btn = document.getElementById('back-top');
+        btn.classList.toggle('show', doc.scrollTop > 400);
+    });
+</script>
+
+</body>
+</html>
